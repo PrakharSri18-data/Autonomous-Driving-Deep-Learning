@@ -223,4 +223,16 @@ datasets/
 .vscode/
 
 # Datasets
-Notebook/Part 1/Images/
+Datasets & Problem Statement/Part 1/Images/
+
+
+# Virtual environment
+venv/
+
+# Data folders
+data/
+Datasets & Problem Statement/
+
+# Python cache
+__pycache__/
+*.pyc
