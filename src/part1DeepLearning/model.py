@@ -1,10 +1,18 @@
-# src/part1DeepLearning/evaluation.py
+# src/part1DeepLearning/model.py
 # --------------------------------------------------
 # model.py is responsible for defining the neural network architecture for vehicle detection.
-# It is also responsible for creating a model and return a trained model.
+# It loads a pretrained faster R-CNN model & replace the classification head to adjust the no. of output classes.
+# It returns a ready-to-train model that can be used in the training loop defined in train.py.
 # --------------------------------------------------
-import torch
+
+
+# ==================================================
+# Importing necessary libraries
+# ------------------------------------------------
+# Torch and Torchvision: For building and training the neural network model.
+# ==================================================
 import torchvision
+from torchvision.models.detection import FasterRCNN_ResNet50_FPN_Weights
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
 
@@ -12,29 +20,25 @@ from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 # VehicleDetector Class
 # ------------------------------------------------
 # __init__: Initializes the class with the number of classes for detection.
-# get_model: Loads a pretrained Faster R-CNN model, modifies the head to match the number of classes, and returns the model.
-# if __name__ == "__main__": This block allows the script to be run directly, creating an instance of VehicleDetector, getting the model, and printing it.
+# get_model: Loads a pretrained faster R-CNN model, replaces the classification head to match the number of classes, and returns the modified model.
 # ==================================================
 class VehicleDetector:
     def __init__(self, num_classes: int):
         self.num_classes = num_classes
 
     def get_model(self):
-        # Load pretrained model
+
+        weights = FasterRCNN_ResNet50_FPN_Weights.DEFAULT
+
         model = torchvision.models.detection.fasterrcnn_resnet50_fpn(
-            weights="DEFAULT"
+            weights=weights
         )
+
         in_features = model.roi_heads.box_predictor.cls_score.in_features
+
         model.roi_heads.box_predictor = FastRCNNPredictor(
             in_features,
             self.num_classes
         )
+
         return model
-
-
-if __name__ == "__main__":
-    num_classes = 2  
-    detector = VehicleDetector(num_classes)
-    model = detector.get_model()
-
-    print(model)
