@@ -1,4 +1,4 @@
-# src/Part 1 Deep Learning/data_ingestion.py
+# src/part1DeepLearning/data_ingestion.py
 # --------------------------------------------------
 # Data Ingestion model loads the dataset & unzips it.
 # Organizes it into training and validation directories. 
