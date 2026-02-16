@@ -79,6 +79,14 @@ def run_inference(image_path, model_path, csv_path, score_threshold=0.5):
     labels = outputs[0]["labels"].cpu()
     scores = outputs[0]["scores"].cpu()
 
+    top_k = 5
+    scores, indices = scores.sort(descending=True)
+    indices = indices[:top_k]
+
+    boxes = boxes[indices]
+    labels = labels[indices]
+    scores = scores[:top_k]
+
     draw = ImageDraw.Draw(image)
 
     for box, label, score in zip(boxes, labels, scores):
@@ -109,5 +117,7 @@ if __name__ == "__main__":
         image_path=r"Datasets & Problem Statement\Part 1\Images\00000001.jpg",  # use zero-padded name
         model_path="models/vehicle_detector.pth",
         csv_path=r"Datasets & Problem Statement\Part 1\labels.csv",  # use original CSV
-        score_threshold=0.5
+        score_threshold=0.1
     )
+
+
