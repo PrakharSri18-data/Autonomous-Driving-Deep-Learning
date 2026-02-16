@@ -12,7 +12,7 @@
 # Torch and Torchvision: For building and training the neural network model.
 # ==================================================
 import torchvision
-from torchvision.models.detection import FasterRCNN_ResNet50_FPN_Weights
+from torchvision.models.detection import FasterRCNN_MobileNet_V3_Large_320_FPN_Weights
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
 
@@ -28,9 +28,9 @@ class VehicleDetector:
 
     def get_model(self):
 
-        weights = FasterRCNN_ResNet50_FPN_Weights.DEFAULT
+        weights = FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.DEFAULT
 
-        model = torchvision.models.detection.fasterrcnn_resnet50_fpn(
+        model = torchvision.models.detection.fasterrcnn_mobilenet_v3_large_320_fpn(
             weights=weights
         )
 

@@ -44,7 +44,23 @@ class VehicleDataset(Dataset):
         self.classes = sorted(self.data["label"].unique())
         self.class_to_idx = {cls: idx + 1 for idx, cls in enumerate(self.classes)}
 
-        self.image_ids = self.data["image_id"].unique()
+        # Get all image IDs from CSV
+        all_image_ids = self.data["image_id"].unique()
+
+        # Get available image filenames
+        available_ids = set(
+            int(file.split(".")[0])
+            for file in os.listdir(self.image_dir)
+        )
+
+        # Keep only valid IDs
+        self.image_ids = [
+            img_id for img_id in all_image_ids
+            if int(img_id) in available_ids
+        ]
+
+        self.image_ids = self.image_ids[:500]
+
 
     def __len__(self):
         return len(self.image_ids)
@@ -53,7 +69,9 @@ class VehicleDataset(Dataset):
         image_id = self.image_ids[idx]
         records = self.data[self.data["image_id"] == image_id]
 
-        img_path = os.path.join(self.image_dir, f"{image_id}.jpg")
+        image_filename = f"{int(image_id):08d}.jpg"
+        img_path = os.path.join(self.image_dir, image_filename)
+
         image = Image.open(img_path).convert("RGB")
 
         boxes = records[["xmin", "ymin", "xmax", "ymax"]].values
@@ -136,5 +154,5 @@ if __name__ == "__main__":
     train_model(
         train_csv="data/train.csv",
         image_dir=r"Datasets & Problem Statement\Part 1\Images",
-        num_epochs=5
+        num_epochs=1
     )
