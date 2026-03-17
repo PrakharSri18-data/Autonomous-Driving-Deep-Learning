@@ -56,7 +56,7 @@ For the complete problem statement open the **Problem Statement.pdf** inside the
 - .gitignore
 - LICENSE
 - README.md
-- output.jpg
+- outputs
 - requirements.txt
 
 ---
@@ -68,12 +68,12 @@ For the complete problem statement open the **Problem Statement.pdf** inside the
 1. **Data Ingestion**
    - Reads annotations CSV
    - Splits into train/validation sets  
-   👉 Implemented in `data_ingestion.py`
+   👉 `data_ingestion.py`
 
 2. **Model Architecture**
    - Faster R-CNN with MobileNet backbone
    - Pretrained model fine-tuned for vehicle detection  
-   👉 Defined in `model.py`
+   👉 `model.py`
 
 3. **Training**
    - Custom PyTorch dataset
@@ -89,6 +89,96 @@ For the complete problem statement open the **Problem Statement.pdf** inside the
 5. **Inference**
    - Predict bounding boxes on new images
    - Draw detections and save outputs  
-   👉 `inference.py` :contentReference[oaicite:5]{index=5}
+   👉 `inference.py` 
 
-  
+---
+
+### ⚙️ Model Details
+
+- Architecture: **Faster R-CNN**
+- Backbone: **MobileNet V3**
+- Task: **Object Detection (Bounding Boxes + Labels)**
+
+---
+
+## 📊 Part 2: Tesla Autopilot Data Analysis
+
+### 🔹 Tasks Performed
+
+- Data Cleaning & Preprocessing
+- Exploratory Data Analysis (EDA)
+- Trend analysis of:
+  - Accidents over time
+  - Death distribution
+  - Driver vs pedestrian impact
+  - Autopilot-related fatalities
+
+### 📁 Notebooks
+
+- `Data Cleaning.ipynb`
+- `EDA Analysis.ipynb`
+
+---
+
+## 📦 Dataset
+
+### Part 1
+- Image dataset with bounding box annotations
+- Format:
+     - image_id
+     - label
+     - xmin
+     - ymin
+     - xmax
+     - ymax
+
+### Part 2
+- Tesla accident dataset including:
+     - Date, location, deaths
+     - Autopilot involvement
+     - Vehicle & collision details
+
+---
+
+## 🚀 How to Run
+
+### 1️⃣ Clone Repository
+- git clone https://github.com/PrakharSri18-data/Autonomous-Driving-Deep-Learning.git
+- cd Autonomous-Driving-Deep-Learning
+
+### 2️⃣ Setup Environment
+- python -m venv venv
+- venv\Scripts\activate
+
+### 3️⃣ Install Dependencies
+- pip install -r requirements.txt
+
+### 4️⃣ Data Ingestion
+- python src/part1DeepLearning/data_ingestion.py
+
+### 5️⃣ Train Model
+- python src/part1DeepLearning/train.py
+
+### 6️⃣ Evaluate Model
+- python src/part1DeepLearning/evaluation.py
+
+### 7️⃣ Run Inference
+- python src/part1DeepLearning/inference.py
+
+---
+
+## 📈 Results
+- Successfully detects vehicles with bounding boxes
+- Model evaluated using **Precision & Recall**
+- Visual outputs saved in `outputs` folder
+
+---
+
+## ⚠️ Challenges
+- Dataset size & preprocessing time
+- Bounding box accuracy
+- Class imbalance
+- Real-time performance constraints
+
+---
+
