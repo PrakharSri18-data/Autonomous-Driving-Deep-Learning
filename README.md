@@ -15,7 +15,7 @@ This project is based on a real-world autonomous driving scenario where:
 - Vehicles must be **detected and localized in images**
 - Autopilot systems must be analyzed for **road safety impact**
 
-For the complete problem statement open the **Problem Statement.pdf**
+For the complete problem statement open the **Problem Statement.pdf** inside the **Datasets & Problem Statement** folder.
 
 ---
 
@@ -39,4 +39,56 @@ For the complete problem statement open the **Problem Statement.pdf**
           - labels.csv
      - Part 2
           - Tesla-Deaths.csv
+     - Problem Statement.pdf
 - **Notebook**
+     - reports/figures
+          - Data Cleaning.ipynb
+          - EDA Analysis.ipynb
+- **src**
+     - part1DeepLearning
+          - __init__.py
+          - data ingestion.py
+          - evaluation.py
+          - inference.py
+          - model.py
+          - train.py
+     - __init__.py
+- .gitignore
+- LICENSE
+- README.md
+- output.jpg
+- requirements.txt
+
+---
+
+## 🧠 Part 1: Vehicle Detection (Deep Learning)
+
+### 🔹 Pipeline
+
+1. **Data Ingestion**
+   - Reads annotations CSV
+   - Splits into train/validation sets  
+   👉 Implemented in `data_ingestion.py`
+
+2. **Model Architecture**
+   - Faster R-CNN with MobileNet backbone
+   - Pretrained model fine-tuned for vehicle detection  
+   👉 Defined in `model.py`
+
+3. **Training**
+   - Custom PyTorch dataset
+   - Bounding box + label training
+   - GPU support  
+   👉 `train.py` 
+
+4. **Evaluation**
+   - IoU-based matching
+   - Precision & Recall calculation  
+   👉 `evaluation.py`
+
+5. **Inference**
+   - Predict bounding boxes on new images
+   - Draw detections and save outputs  
+   👉 `inference.py`
+
+  
