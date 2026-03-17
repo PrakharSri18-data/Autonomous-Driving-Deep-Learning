@@ -182,3 +182,15 @@ For the complete problem statement open the **Problem Statement.pdf** inside the
 
 ---
 
+## 🧠 Key Learnings
+- End-to-end ML pipeline design
+- Object detection using PyTorch
+- Evaluation using IoU metrics
+- Real-world data analysis (Tesla autopilot)
+- Combining Deep Learning + Data Science in one project
+
+---
+
+## 👤 Author
+- Prakhar Srivastava
+- Aspiring Data Scientist & Business Analyst | Machine Learning, Deep Learning & Generative AI Enthusiast
