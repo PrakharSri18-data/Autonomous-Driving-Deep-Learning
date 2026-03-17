@@ -89,6 +89,6 @@ For the complete problem statement open the **Problem Statement.pdf** inside the
 5. **Inference**
    - Predict bounding boxes on new images
    - Draw detections and save outputs  
-   👉 `inference.py`
+   👉 `inference.py` :contentReference[oaicite:5]{index=5}
 
   
