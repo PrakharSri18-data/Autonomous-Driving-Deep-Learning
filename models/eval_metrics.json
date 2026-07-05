@@ -1,0 +1,24 @@
+{
+  "num_images": 1134,
+  "iou_threshold": 0.5,
+  "score_threshold": 0.5,
+  "precision": 0.6853366893106754,
+  "recall": 0.29632653053161184,
+  "true_positives": 1089,
+  "false_positives": 500,
+  "false_negatives": 2586,
+  "mAP@0.5": 0.12814033548238274,
+  "per_class_AP": {
+    "car": 0.4621558748897425,
+    "pickup_truck": 0.17214871622771058,
+    "single_unit_truck": 0.00293233081852471,
+    "motorized_vehicle": 0.01548326964820404,
+    "bus": 0.6310892067100663,
+    "pedestrian": 0.0,
+    "work_van": 0.005720407222699342,
+    "articulated_truck": 0.07063118952791825,
+    "non-motorized_vehicle": 0.0,
+    "bicycle": 0.049382695261344534,
+    "motorcycle": 0.0
+  }
+}
