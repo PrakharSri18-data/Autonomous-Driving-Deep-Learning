@@ -184,4 +184,4 @@ The original `requirements.txt` also listed TensorFlow/Keras despite the entire 
 
 ## 👤 Author
 - Prakhar Srivastava
-- Aspiring Data Scientist & Business Analyst | Machine Learning, Deep Learning & Generative AI Enthusiast
+- Data Analyst, Data Scientist & AI Engineer | Machine Learning, Deep Learning & AI Automation Enthusiast
