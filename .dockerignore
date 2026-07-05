@@ -1,0 +1,13 @@
+venv/
+.git/
+.github/
+data/
+models/
+outputs/
+Datasets & Problem Statement/
+Notebook/
+tests/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
