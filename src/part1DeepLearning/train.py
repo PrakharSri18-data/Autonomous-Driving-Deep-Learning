@@ -1,137 +1,90 @@
 # src/part1DeepLearning/train.py
 # --------------------------------------------------
-# train.py is responsible for training the neural network model for vehicle detection.
-# It loads the training dataset & images, bounding box annotations, and labels.
-# It converts the annotations into PyTorch tensors and feeds them into the model for training.
-# It loads model from model.py & sends model to GPU(if available) for faster training.
-# Then runs the training loop for a specified number of epochs, calculating the loss and updating the model weights using an optimizer.
-# Finally, it saves the trained model to disk for later use in evaluation and inference.
+# Trains the Faster R-CNN / MobileNetV3 vehicle detector. Loads the shared
+# VehicleDataset with the persisted class mapping (see dataset.py), runs the
+# training loop, tracks per-epoch loss + a held-out validation loss, saves the
+# best checkpoint (by val loss, not just "whatever the last epoch produced"),
+# and writes training_history.json so loss curves can be plotted later.
 # --------------------------------------------------
 
-
-# ==================================================
-# Importing necessary libraries
-# ------------------------------------------------
-# OS Library: For handling file paths and directory operations.
-# Torch: For building and training the neural network model.
-# Pandas: For data manipulation and loading the dataset from CSV files.
-# PIL: For image processing and loading images.
-# Torchvision: For data transformations and loading pretrained models.
-# model.py: For importing the VehicleDetector class which defines the model architecture.
-# ==================================================
+import argparse
+import json
 import os
+
+import config
 import torch
-import pandas as pd
-from torch.utils.data import Dataset, DataLoader
-from PIL import Image
-from torchvision import transforms
+from dataset import VehicleDataset, load_classes
 from model import VehicleDetector
+from torch.utils.data import DataLoader
+from torchvision import transforms
+from utils import seed_everything, setup_logging
 
 
-# ==================================================
-# VehicleDataset Class (Custom Detection Dataset)
-# ------------------------------------------------
-# __init__: Initializes the dataset with the path to the CSV file containing annotations, the directory containing images, and any transformations to be applied to the images.
-# __len__: Returns the total number of unique images in the dataset.
-# __getitem__: Loads an image and its corresponding annotations (bounding boxes and labels) based on the index, applies transformations, and returns the image and target in the format required by the model.
-# ==================================================
-class VehicleDataset(Dataset):
-    def __init__(self, csv_file, image_dir, transform=None):
-        self.data = pd.read_csv(csv_file)
-        self.image_dir = image_dir
-        self.transform = transform
-
-        self.classes = sorted(self.data["label"].unique())
-        self.class_to_idx = {cls: idx + 1 for idx, cls in enumerate(self.classes)}
-
-        # Get all image IDs from CSV
-        all_image_ids = self.data["image_id"].unique()
-
-        # Get available image filenames
-        available_ids = set(
-            int(file.split(".")[0])
-            for file in os.listdir(self.image_dir)
-        )
-
-        # Keep only valid IDs
-        self.image_ids = [
-            img_id for img_id in all_image_ids
-            if int(img_id) in available_ids
-        ]
-
-        self.image_ids = self.image_ids[:500]
+def _compute_val_loss(model, data_loader, device) -> float:
+    """Faster R-CNN only returns a loss dict in train() mode, so we keep the model
+    in train mode for this forward pass but disable gradient tracking — this is
+    the standard workaround for torchvision detection models, not a bug."""
+    total_loss = 0.0
+    num_batches = 0
+    with torch.no_grad():
+        for images, targets in data_loader:
+            images = [img.to(device) for img in images]
+            targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+            loss_dict = model(images, targets)
+            total_loss += sum(loss for loss in loss_dict.values()).item()
+            num_batches += 1
+    return total_loss / max(num_batches, 1)
 
 
-    def __len__(self):
-        return len(self.image_ids)
-
-    def __getitem__(self, idx):
-        image_id = self.image_ids[idx]
-        records = self.data[self.data["image_id"] == image_id]
-
-        image_filename = f"{int(image_id):08d}.jpg"
-        img_path = os.path.join(self.image_dir, image_filename)
-
-        image = Image.open(img_path).convert("RGB")
-
-        boxes = records[["xmin", "ymin", "xmax", "ymax"]].values
-        labels = records["label"].map(self.class_to_idx).values
-
-        boxes = torch.as_tensor(boxes, dtype=torch.float32)
-        labels = torch.as_tensor(labels, dtype=torch.int64)
-
-        target = {
-            "boxes": boxes,
-            "labels": labels
-        }
-
-        if self.transform:
-            image = self.transform(image)
-
-        return image, target
-
-
-# ==================================================
-# train_model Function(Training Function)
-# -------------------------------------------------
-# train_model: This function takes the path to the training CSV file, the directory containing images and the number of epochs for training. 
-# It sets up the device, data transformations, dataset, and data loader. It initializes the model using the VehicleDetector class, defines the optimizer, and runs the training loop for the specified number of epochs. After training, it saves the trained model to disk.
-# if __name__ == "__main__": This block allows the script to be run directly, calling the train_model function with the appropriate paths and parameters.
-# ==================================================
-def train_model(train_csv, image_dir, num_epochs=5):
-
+def train_model(
+    train_csv: str,
+    val_csv: str,
+    image_dir: str,
+    classes_path: str,
+    train_cfg: config.TrainConfig,
+    model_path: str,
+    history_path: str,
+    logger,
+):
+    seed_everything(train_cfg.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    logger.info(f"Using device: {device}")
 
-    transform = transforms.Compose([
-        transforms.ToTensor()
-    ])
+    class_to_idx = load_classes(classes_path)
+    transform = transforms.Compose([transforms.ToTensor()])
 
-    dataset = VehicleDataset(train_csv, image_dir, transform=transform)
-
-    data_loader = DataLoader(
-        dataset,
-        batch_size=4,
-        shuffle=True,
-        collate_fn=lambda x: tuple(zip(*x))
+    train_dataset = VehicleDataset(
+        train_csv, image_dir, class_to_idx, transform=transform, max_images=train_cfg.max_train_images
     )
+    val_dataset = VehicleDataset(val_csv, image_dir, class_to_idx, transform=transform)
 
-    num_classes = len(dataset.classes) + 1  # + background
+    def collate_fn(batch):
+        return tuple(zip(*batch))
 
-    detector = VehicleDetector(num_classes)
-    model = detector.get_model()
+    train_loader = DataLoader(train_dataset, batch_size=train_cfg.batch_size, shuffle=True, collate_fn=collate_fn)
+    val_loader = DataLoader(val_dataset, batch_size=train_cfg.batch_size, shuffle=False, collate_fn=collate_fn)
+
+    num_classes = len(class_to_idx) + 1  # + background
+    model = VehicleDetector(num_classes).get_model()
     model.to(device)
 
     params = [p for p in model.parameters() if p.requires_grad]
-    optimizer = torch.optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
+    optimizer = torch.optim.SGD(
+        params, lr=train_cfg.learning_rate, momentum=train_cfg.momentum, weight_decay=train_cfg.weight_decay
+    )
 
-    print("Starting training...")
+    history = {"train_loss": [], "val_loss": []}
+    best_val_loss = float("inf")
+    os.makedirs(os.path.dirname(model_path), exist_ok=True)
 
-    for epoch in range(num_epochs):
+    logger.info(f"Starting training for {train_cfg.num_epochs} epoch(s) on {len(train_dataset)} images...")
+
+    for epoch in range(train_cfg.num_epochs):
         model.train()
-        epoch_loss = 0
+        epoch_loss = 0.0
 
-        for images, targets in data_loader:
-            images = list(img.to(device) for img in images)
+        for images, targets in train_loader:
+            images = [img.to(device) for img in images]
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
             loss_dict = model(images, targets)
@@ -143,16 +96,61 @@ def train_model(train_csv, image_dir, num_epochs=5):
 
             epoch_loss += losses.item()
 
-        print(f"Epoch [{epoch+1}/{num_epochs}] Loss: {epoch_loss:.4f}")
+        avg_train_loss = epoch_loss / len(train_loader)
+        val_loss = _compute_val_loss(model, val_loader, device)
 
-    os.makedirs("models", exist_ok=True)
-    torch.save(model.state_dict(), "models/vehicle_detector.pth")
-    print("Model saved successfully!")
+        history["train_loss"].append(avg_train_loss)
+        history["val_loss"].append(val_loss)
+
+        logger.info(f"Epoch [{epoch + 1}/{train_cfg.num_epochs}] train_loss={avg_train_loss:.4f} val_loss={val_loss:.4f}")
+
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            torch.save(model.state_dict(), model_path)
+            logger.info(f"New best val_loss {val_loss:.4f} -> saved checkpoint to {model_path}")
+
+    with open(history_path, "w") as f:
+        json.dump(history, f, indent=2)
+    logger.info(f"Training history written to {history_path}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Train the vehicle detector.")
+    parser.add_argument("--train-csv", default=config.TRAIN_CSV)
+    parser.add_argument("--val-csv", default=config.VAL_CSV)
+    parser.add_argument("--image-dir", default=config.IMAGE_DIR)
+    parser.add_argument("--classes-path", default=config.CLASSES_JSON)
+    parser.add_argument("--model-path", default=config.MODEL_PATH)
+    parser.add_argument("--history-path", default=config.HISTORY_PATH)
+    parser.add_argument("--epochs", type=int, default=config.TrainConfig.num_epochs)
+    parser.add_argument("--batch-size", type=int, default=config.TrainConfig.batch_size)
+    parser.add_argument("--lr", type=float, default=config.TrainConfig.learning_rate)
+    parser.add_argument("--max-train-images", type=int, default=config.TrainConfig.max_train_images)
+    parser.add_argument("--seed", type=int, default=config.TrainConfig.seed)
+    parser.add_argument("--log-file", default=None)
+    args = parser.parse_args()
+
+    logger = setup_logging(args.log_file)
+
+    train_cfg = config.TrainConfig(
+        num_epochs=args.epochs,
+        batch_size=args.batch_size,
+        learning_rate=args.lr,
+        max_train_images=args.max_train_images,
+        seed=args.seed,
+    )
+
+    train_model(
+        train_csv=args.train_csv,
+        val_csv=args.val_csv,
+        image_dir=args.image_dir,
+        classes_path=args.classes_path,
+        train_cfg=train_cfg,
+        model_path=args.model_path,
+        history_path=args.history_path,
+        logger=logger,
+    )
 
 
 if __name__ == "__main__":
-    train_model(
-        train_csv="data/train.csv",
-        image_dir=r"Datasets & Problem Statement\Part 1\Images",
-        num_epochs=1
-    )
+    main()
